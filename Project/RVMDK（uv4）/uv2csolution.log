@@ -1,0 +1,25 @@
+0 out of 1 target(s) converted
+Error: 1 error(s), 13 warning(s):
+Errors:
+	<Target> "Template" μVision project is configured to use Arm Compiler 5.
+	CMSIS csolution projects support Arm Compiler 6 only.
+	For details on how to manually migrate to AC6, see
+	https://developer.arm.com/documentation/100068/0621/Migrating-from-Arm-Compiler-5-to-Arm-Compiler-for-Embedded-6
+Warnings:
+	<Target> "Template" File 'F:/BCI_Headring/BCI_Headring_V2.1/User/usart' not matched
+	<Target> "Template" File 'F:/BCI_Headring/BCI_Headring_V2.1/User/SysTick' not matched
+	<Target> "Template" File 'F:/BCI_Headring/BCI_Headring_V2.1/User/CRC_16' not matched
+	<Target> "Template" File 'F:/BCI_Headring/BCI_Headring_V2.1/User/GPIO' not matched
+	<Target> "Template" File 'F:/BCI_Headring/BCI_Headring_V2.1/User/Ctrl' not matched
+	<Target> "Template" File 'F:/BCI_Headring/BCI_Headring_V2.1/User/ADC' not matched
+	<Target> "Template" File 'F:/BCI_Headring/BCI_Headring_V2.1/User/data' not matched
+	<Target> "Template" File 'F:/BCI_Headring/BCI_Headring_V2.1/User/TIM1' not matched
+	<Target> "Template" File 'F:/BCI_Headring/BCI_Headring_V2.1/User/TIM2' not matched
+	<Target> "Template" File 'F:/BCI_Headring/BCI_Headring_V2.1/User/CAN' not matched
+	<Target> "Template" File 'F:/BCI_Headring/BCI_Headring_V2.1/User/upgraded' not matched
+	<Target> "Template" File 'F:/BCI_Headring/BCI_Headring_V2.1/User/flash' not matched
+	<Target> "Template" The following user commands should be run manually:
+            After Build/Rebuild
+                D:\Keil_v5\ARM\ARMCC\bin\fromelf.exe --bin -o "$L@L.bin" "#L"
+
+Process failed with exit code 2

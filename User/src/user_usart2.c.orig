@@ -1,0 +1,223 @@
+#include "user_usart2.h"
+
+u8 USART2_RX_BUF[128] = {0};
+u8 USART2_TX_BUF[1] = {0};
+u16 USART2_RX_CNT = 0;
+u8 Usart2_Rx_Flog = 0;
+
+/**********************************************************************************
+Function   : void USART2_Config(void)
+Discription: 串口2初始化配置
+Parameter  :
+**********************************************************************************/
+void USART2_Config(void)
+{
+    GPIO_InitTypeDef GPIO_InitStructure;
+    USART_InitTypeDef USART_InitStructure;
+    DMA_InitTypeDef DMA_InitStructure;
+
+    RCC_APB1PeriphClockCmd(RCC_APB1Periph_USART2,ENABLE);
+    RCC_APB2PeriphClockCmd(RCC_APB2Periph_GPIOA
+                           |RCC_APB2Periph_AFIO ,ENABLE);
+    RCC_AHBPeriphClockCmd( RCC_AHBPeriph_DMA1, ENABLE);
+
+    GPIO_InitStructure.GPIO_Mode = GPIO_Mode_AF_PP;
+    GPIO_InitStructure.GPIO_Speed = GPIO_Speed_50MHz;
+    GPIO_InitStructure.GPIO_Pin = GPIO_Pin_2;
+    GPIO_Init(GPIOA,&GPIO_InitStructure);
+
+
+    GPIO_InitStructure.GPIO_Mode = GPIO_Mode_IN_FLOATING;
+    GPIO_InitStructure.GPIO_Pin = GPIO_Pin_3;
+    GPIO_Init(GPIOA,&GPIO_InitStructure);
+
+    USART_InitStructure.USART_BaudRate = 921600;
+    USART_InitStructure.USART_WordLength = USART_WordLength_8b;
+    USART_InitStructure.USART_StopBits = USART_StopBits_1;
+    USART_InitStructure.USART_Parity = USART_Parity_No;
+    USART_InitStructure.USART_HardwareFlowControl =USART_HardwareFlowControl_None;
+    USART_InitStructure.USART_Mode = USART_Mode_Tx | USART_Mode_Rx;
+    USART_Init(USART2, &USART_InitStructure);
+
+    USART_ITConfig(USART2, USART_IT_IDLE, ENABLE);
+//    USART_ITConfig(USART2, USART_IT_TC, ENABLE);
+    USART_Cmd(USART2, ENABLE);
+    USART_ClearFlag(USART2, USART_FLAG_TC);
+
+    USART_DMACmd(USART2,USART_DMAReq_Tx,ENABLE);
+    USART_DMACmd(USART2,USART_DMAReq_Rx,ENABLE);
+
+    /*USART1 DMA */
+    DMA_DeInit(DMA1_Channel7);
+    DMA_InitStructure.DMA_PeripheralBaseAddr = (u32)&USART2->DR;
+    DMA_InitStructure.DMA_MemoryBaseAddr = (u32)USART2_TX_BUF;
+    DMA_InitStructure.DMA_DIR = DMA_DIR_PeripheralDST;
+    DMA_InitStructure.DMA_BufferSize = 1;
+    DMA_InitStructure.DMA_PeripheralInc = DMA_PeripheralInc_Disable;
+    DMA_InitStructure.DMA_MemoryInc = DMA_MemoryInc_Enable;
+    DMA_InitStructure.DMA_PeripheralDataSize = DMA_PeripheralDataSize_Byte;
+    DMA_InitStructure.DMA_MemoryDataSize = DMA_MemoryDataSize_Byte;
+    DMA_InitStructure.DMA_Mode = DMA_Mode_Normal;
+    DMA_InitStructure.DMA_Priority = DMA_Priority_High;
+    DMA_InitStructure.DMA_M2M = DMA_M2M_Disable;
+    DMA_Init(DMA1_Channel7, &DMA_InitStructure);
+    DMA_Cmd(DMA1_Channel7, ENABLE);
+
+    /*USART1 DMA */
+    DMA_DeInit(DMA1_Channel6);
+    DMA_InitStructure.DMA_PeripheralBaseAddr = (u32)&USART2->DR;
+    DMA_InitStructure.DMA_MemoryBaseAddr = (u32)USART2_RX_BUF;
+    DMA_InitStructure.DMA_DIR = DMA_DIR_PeripheralSRC;
+    DMA_InitStructure.DMA_BufferSize = 128;
+    DMA_InitStructure.DMA_PeripheralInc = DMA_PeripheralInc_Disable;
+    DMA_InitStructure.DMA_MemoryInc = DMA_MemoryInc_Enable;
+    DMA_InitStructure.DMA_PeripheralDataSize = DMA_PeripheralDataSize_Byte;
+    DMA_InitStructure.DMA_MemoryDataSize = DMA_MemoryDataSize_Byte;
+    DMA_InitStructure.DMA_Mode = DMA_Mode_Normal;
+    DMA_InitStructure.DMA_Priority = DMA_Priority_High;
+    DMA_InitStructure.DMA_M2M = DMA_M2M_Disable;
+    DMA_Init(DMA1_Channel6, &DMA_InitStructure);
+    DMA_Cmd(DMA1_Channel6, ENABLE);
+}
+
+/**********************************************************************************
+Function   : void NVIC2_Configuration (void)
+Discription: 串口2中断配置
+Parameter  :
+**********************************************************************************/
+void NVIC2_Configuration (void)
+{
+    NVIC_InitTypeDef NVIC_InitStructure;
+    NVIC_PriorityGroupConfig(NVIC_PriorityGroup_1);
+    NVIC_InitStructure.NVIC_IRQChannel = USART2_IRQn;
+    NVIC_InitStructure.NVIC_IRQChannelPreemptionPriority = 0;
+    NVIC_InitStructure.NVIC_IRQChannelSubPriority = 1;
+    NVIC_InitStructure.NVIC_IRQChannelCmd = ENABLE;
+    NVIC_Init(&NVIC_InitStructure);
+}
+
+/**********************************************************************************
+Function   : void USART2_Send_Data(u8 *buf,u16 len)
+Discription: 串口2发送函数
+Parameter  :
+**********************************************************************************/
+void USART2_Send_Data(u8 *buf, u16 len)
+{
+    while(DMA_GetFlagStatus(DMA1_FLAG_TC7) == RESET);
+    DMA_ClearFlag(DMA1_FLAG_TC7);
+    DMA_Cmd(DMA1_Channel7,DISABLE);
+    DMA_SetCurrDataCounter(DMA1_Channel7,len);
+    DMA1_Channel7->CMAR=(u32)buf;
+    DMA_Cmd(DMA1_Channel7, ENABLE);
+}
+
+/**********************************************************************************
+Function   : void USART2_IRQHandler(void)
+Discription: 串口2接收中断函数
+Parameter  :
+**********************************************************************************/
+void USART2_IRQHandler(void)
+{
+    u8 num=0;
+    if(USART_GetITStatus(USART2, USART_IT_IDLE) != RESET)
+    {
+        DMA_Cmd(DMA1_Channel6, DISABLE);
+        num = USART2->SR;
+        num = USART2->DR;
+        num = num;
+        USART2_RX_CNT = 128-DMA_GetCurrDataCounter(DMA1_Channel6);
+        DMA_SetCurrDataCounter(DMA1_Channel6, 128);
+        DMA_Cmd(DMA1_Channel6, ENABLE);
+        Usart2_Rx_Flog = 1;
+    }
+}
+
+/**********************************************************************************
+Function   : void Send_channel_data(s32 *cannle_data)
+Discription: 发送数据
+Parameter  :
+**********************************************************************************/
+void Send_channel_data(s32 *cannle_data)
+{
+	u8 i = 0;
+	static u8 send_buf[76] = {0};
+	send_buf[0] = 0xAA;
+	send_buf[1] = 0xBB;
+	send_buf[2] = 0xCC;
+	send_buf[3] = 0xDD;
+	send_buf[4] = 0xC4;
+	send_buf[5] = 0x4C;
+	
+	for(i = 0; i < 16; i++ )
+	{
+		send_buf[i*4+6] = cannle_data[i] >> 24;
+		send_buf[i*4+7] = cannle_data[i] >> 16;
+		send_buf[i*4+8] = cannle_data[i] >> 8;
+		send_buf[i*4+9] = cannle_data[i];
+	}
+	
+	send_buf[70] = crc16(send_buf, 70, 0) >> 8;
+	send_buf[71] = crc16(send_buf, 70, 0);
+	send_buf[72] = 0xDD;
+	send_buf[73] = 0xCC;
+	send_buf[74] = 0xBB;
+	send_buf[75] = 0xAA;
+	
+	USART2_Send_Data(send_buf, 76);
+}
+
+
+/**********************************************************************************
+Function   : void Send_channel_data(s32 *cannle_data)
+Discription: 发送数据
+Parameter  :
+**********************************************************************************/
+void RX2_Data(uint8_t *data, uint16_t index)
+{
+    uint16_t CRC16 = 0;
+    uint8_t CRC16_H = 0;
+    uint8_t CRC16_L = 0;
+    int buf_index = 0;
+    int final_index = 0;
+    int message_len = 0;
+
+    uint8_t *data_buf = NULL;
+    data_buf = (uint8_t *)malloc(sizeof(uint8_t) * index);
+
+    if (data_buf == NULL)
+    {
+        return;
+    }
+    else
+    {
+        memcpy(data_buf, data, index);
+
+        for(buf_index = 0 ; index - buf_index >= 12; buf_index++)
+        {
+            if( data_buf[buf_index] == 0xFA &&
+				data_buf[buf_index + 1] == 0xFA &&
+                    data_buf[buf_index + 2] == 0xFB &&
+                    data_buf[buf_index + 3] == 0xFB &&
+                    data_buf[buf_index + 5] >= 12 &&
+                    buf_index + data_buf[buf_index + 5] <= index &&
+                    data_buf[buf_index + data_buf[buf_index + 5] - 1] == 0xFF &&
+                    data_buf[buf_index + data_buf[buf_index + 5] - 2] == 0xFF &&
+                    data_buf[buf_index + data_buf[buf_index + 5] - 3] == 0xFE &&
+                    data_buf[buf_index + data_buf[buf_index + 5] - 4] == 0xFE )
+            {
+                final_index = buf_index + data_buf[buf_index + 5] - 1;
+                message_len = data_buf[buf_index + 5];
+                memcpy(core_board_temporary_data_low, &data_buf[buf_index], message_len);
+                CRC16 = crc16(core_board_temporary_data_low, data_buf[5] - 6, 0);
+                CRC16_H = CRC16 >> 8;
+                CRC16_L = CRC16;
+
+                if (CRC16_H == core_board_temporary_data_low[message_len - 6] && CRC16_L == core_board_temporary_data_low[message_len - 5])
+                {
+                    switch (core_board_temporary_data_low[4])
+                    {}
+				}
+			}
+		}
+	}
+}

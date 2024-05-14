@@ -1,0 +1,57 @@
+#include "main.h"
+
+u8 test_data1 = 0; 
+u8 test_data2 = 0;
+
+/**
+  * @brief  主函数
+  * @param  无
+  * @retval 无
+  */
+int main(void)
+{
+	RCC_ClocksTypeDef get_rcc_clock;
+	RCC_GetClocksFreq(&get_rcc_clock);
+	SysTick_Init();            //滴答定时器初始化                
+	All_IO_Init();             //所有IO初始化
+	while(Power_ON()){};       //开机检测
+	delay_ms(100);	
+	ADS1299_POWER(1);          // ESP32和ADS1299供电开启
+	ads1299_GPIO_Init();       // ADS1299的IO和spi初始化	
+    USART1_Config();           // 串口1初始化  转USB串口       
+	USART2_Config();           // 串口2初始化  和ESP32通信串口        
+	ADC_Config();              // ADC初始化    计算电池电量
+	ADS1299_Device_One_Init(); // ads1299 初始化化配置
+	ADS1299_Device_Two_Init(); // ads1299 初始化化配置
+		
+//	I2C1_Init();               // I2C初始化    六轴芯片通信 
+//	BMI088_Config_Init();
+		
+	user_i2c_init();
+		
+		
+	All_led_pwm_init();        // 所有LED灯的控制口PWM配置初始化
+	electrode_led_control();
+	TIM2_Configuration(10-1,7200-1); //定时1ms
+	TIM2_NVIC_Configuration();
+    
+	while(1) 
+	{	
+        if(Usart1_Rx_Flog)
+		{
+			Usart1_Rx_Flog = 0;
+			RX1_Data(USART1_RX_BUF, USART1_RX_CNT);
+		}	
+
+        if(Usart2_Rx_Flog)
+		{
+			Usart2_Rx_Flog = 0;
+			RX2_Data(USART2_RX_BUF, USART2_RX_CNT);
+		} 		
+		test_data1 = RECHARGE_STATE_ONE;
+		test_data2 = RECHARGE_STATE_TWO;
+		
+	}	
+}
+
+
